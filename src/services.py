@@ -1,7 +1,7 @@
 from typing import Annotated
 from dataclasses import dataclass, field
-from fastapi import FastAPI, Request, Response, UploadFile, File
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, Request, Response, UploadFile, File, Form
+from fastapi.responses import RedirectResponse, StreamingResponse, JSONResponse
 from .controllers.restoration import RestorationController
 
 
@@ -28,15 +28,27 @@ class Services:
         """
         return RedirectResponse("/docs")
 
-    async def restoration_infer(self, image: Annotated[UploadFile, File(...)], mask: Annotated[UploadFile, File(...)]):
+    async def restoration_infer(
+        self,
+        image: Annotated[UploadFile, File(...)],
+        mask: Annotated[UploadFile, File(...)],
+        stream: Annotated[bool, Form()] = False
+    ):
         """
         Crack restoration
         """
         _image = await image.read()
         _mask = await mask.read()
-        return {
-            "path": self.restoration.infer(_image, _mask, save=True)
-        }
+
+        result = self.restoration.infer(
+            _image, _mask, True if stream == False else False)
+
+        if stream == False:
+            return JSONResponse({
+                "path": result
+            })
+
+        return StreamingResponse(result, media_type="application/octet-stream", headers={"Content-Disposition": f"attachment;filename={image.filename}"})
 
     @property
     def __call__(self):

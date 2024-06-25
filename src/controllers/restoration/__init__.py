@@ -1,5 +1,6 @@
-from typing import Union
+from typing import Union, List
 import numpy.typing as npt
+import io
 import time
 import logging
 import numpy as np
@@ -27,7 +28,8 @@ class RestorationController:
         self,
         src: Union[bytes, npt.NDArray],
         mask: Union[bytes, npt.NDArray],
-        save: bool = False
+        save: bool = False,
+        ext: str = "jpeg"
     ):
         # Convert to array
         if isinstance(src, bytes):
@@ -41,5 +43,19 @@ class RestorationController:
             f"Inferred {self.__class__.__name__} [{round(time.time() - s, 4)}s]")
 
         if save:
-            return Temper.save_pwd_image(inpainted)
-        return inpainted
+            return Temper.save_pwd_image(inpainted, prefix="restore", ext=ext)
+
+        buffer = io.BytesIO()
+        img = self.model.numpy_to_pil(inpainted)
+        img.save(buffer, format=ext)
+        return buffer
+
+    def infers(
+        self,
+        src: List[Union[bytes, npt.NDArray]],
+        mask: List[Union[bytes, npt.NDArray]],
+        save: bool = False,
+        ext: str = "jpeg"
+    ):
+        for _src, _mask in zip(src, mask):
+            yield self.infer(_src, _mask, save, ext)

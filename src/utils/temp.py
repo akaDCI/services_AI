@@ -8,12 +8,15 @@ import cv2 as cv
 import numpy as np
 
 
+TEMP_DIRECTORY = "temp"
+
+
 class Temper:
     """
     Help save data to temp folder
     """
     @staticmethod
-    def get_temp_dir(directory="temp") -> str:
+    def get_temp_dir(directory=TEMP_DIRECTORY) -> str:
         _path = os.path.join(os.getcwd(), directory)
         if os.path.exists(_path):
             return _path
@@ -23,7 +26,7 @@ class Temper:
     @staticmethod
     def save_pwd_image(
         data: Union[Image.Image, npt.NDArray, cv.Mat],
-        prefix: str = "temp",
+        prefix: str = TEMP_DIRECTORY,
         ext: str = "jpg"
     ) -> str:
         _id = f"{prefix}_{uuid.uuid4().hex}.{ext}"
@@ -39,4 +42,4 @@ class Temper:
 
         logging.info(f"Saved {_path}")
 
-        return _path
+        return f"{TEMP_DIRECTORY}/{_id}"
