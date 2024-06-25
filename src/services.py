@@ -1,8 +1,7 @@
+from typing import Annotated
 from dataclasses import dataclass, field
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, UploadFile, File
 from fastapi.responses import RedirectResponse
-from .middlewares.body_parser import BodyParserMiddleware
-from .middlewares.formdata_parser import FormDataParserMiddleware
 from .controllers.restoration import RestorationController
 
 
@@ -19,10 +18,6 @@ class Services:
         # Intialize services
         self.restoration = RestorationController()
 
-        # Middleware
-        self.app.add_middleware(BodyParserMiddleware)
-        # self.app.add_middleware(FormDataParserMiddleware)
-
         # Register routes
         self.app.get("/")(self.main)
         self.app.post("/api/restore")(self.restoration_infer)
@@ -33,11 +28,13 @@ class Services:
         """
         return RedirectResponse("/docs")
 
-    async def restoration_infer(self, request: Request, response: Response):
+    async def restoration_infer(self, image: Annotated[UploadFile, File(...)]):
         """
         Crack restoration
         """
-        return self.restoration.infer()
+        data = await image.read()
+        print(len(data))
+        return {"hello": "hi"}
 
     @property
     def __call__(self):
