@@ -5,6 +5,13 @@ FROM python:3.10.13-slim-bookworm
 ENV CLOUD_HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH
 
+# Install libgl1-mesa-glx for opencv
+RUN apt-get update -y
+RUN apt install libgl1-mesa-glx -y
+RUN apt-get install 'ffmpeg'\
+    'libsm6'\
+    'libxext6' -y
+
 # Setup new user named user with UID 1000
 RUN useradd -m -u 1000 user
 
