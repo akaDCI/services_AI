@@ -1,3 +1,4 @@
+import logging.config
 import os
 import logging
 import uvicorn
@@ -14,10 +15,10 @@ class AIServer:
 
 if __name__ == "__main__":
     server = AIServer()
-    logging.log(logging.INFO, "Starting server 🐧")
+    logging.log(level=logging.INFO, msg="Starting server 🐧")
     uvicorn.run(
         server,
         host=os.environ.get("HOST", "127.0.0.1"),
-        port=os.environ.get("PORT", 7860),
+        port=int(os.environ.get("PORT", 7860)),
         factory=True
     )
