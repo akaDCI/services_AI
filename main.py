@@ -15,8 +15,8 @@ class AIServer:
 if __name__ == "__main__":
     server = AIServer()
     logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(name)s, %(filename)s (%(lineno)d) | \033[1m%(asctime)s\033[0m | \033[96m%(levelname)s\033[0m | %(message)s",
+        level=logging.INFO,
+        format="%(filename)s (%(lineno)d) | \033[1m%(asctime)s\033[0m | \033[96m%(levelname)s\033[0m | %(message)s",
         datefmt='%d-%b-%y %H:%M:%S'
     )
     uvicorn.run(

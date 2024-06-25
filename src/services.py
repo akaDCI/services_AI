@@ -28,13 +28,15 @@ class Services:
         """
         return RedirectResponse("/docs")
 
-    async def restoration_infer(self, image: Annotated[UploadFile, File(...)]):
+    async def restoration_infer(self, image: Annotated[UploadFile, File(...)], mask: Annotated[UploadFile, File(...)]):
         """
         Crack restoration
         """
-        data = await image.read()
-        print(len(data))
-        return {"hello": "hi"}
+        _image = await image.read()
+        _mask = await mask.read()
+        return {
+            "path": self.restoration.infer(_image, _mask, save=True)
+        }
 
     @property
     def __call__(self):
