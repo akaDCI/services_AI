@@ -16,4 +16,6 @@ class FormDataParserMiddleware(BaseHTTPMiddleware):
         if request.method == "POST" and request.headers.get("content-type", "").startswith("multipart/form-data"):
             form = await request.form()
 
+            print("Form data", form)
+
         return await call_next(request)

@@ -1,4 +1,3 @@
-import logging.config
 import os
 import logging
 import uvicorn
@@ -15,7 +14,11 @@ class AIServer:
 
 if __name__ == "__main__":
     server = AIServer()
-    logging.log(level=logging.INFO, msg="Starting server 🐧")
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(name)s | \033[1m%(asctime)s\033[0m | \033[96m%(levelname)s\033[0m | %(message)s",
+        datefmt='%d-%b-%y %H:%M:%S'
+    )
     uvicorn.run(
         server,
         host=os.environ.get("HOST", "127.0.0.1"),
