@@ -165,4 +165,14 @@ cython_debug/
 temp/
 
 models/*
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+*.ico
+*.webp
+
+#
+tmp/upload_files/*
 !.gitkeep

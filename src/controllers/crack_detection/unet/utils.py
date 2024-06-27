@@ -58,8 +58,14 @@ def create_model(device, type ='vgg16'):
     return model.to(device)
 
 def load_unet_vgg16(model_path):
-    model = UNet16(pretrained=True)
-    checkpoint = torch.load(model_path)
+    # check device
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
+    
+    model = create_model(device, type ='vgg16')
+    checkpoint = torch.load(model_path, map_location=device)
     if 'model' in checkpoint:
         print('loading model')
         model.load_state_dict(checkpoint['model'])
