@@ -69,13 +69,18 @@ class Services:
         # create folder
         os.makedirs(folder_path, exist_ok=True)
         for image in upload_images:
+            img_filename = image.filename.split(".")[-1]
+            if img_filename.lower() not in ["jpg", "jpeg", "png"]:
+                raise HTTPException(status_code=400, detail=f"Invalid image format {image.filename}")
+            
             name_image = uuid.uuid4().hex
             # save image in folder_path
             image_path = f'{folder_path}/{name_image}.jpg'
             try:
                 image_data = await image.read()
                 pil_image = Image.open(io.BytesIO(image_data))
-                pil_image.save(image_path)
+                rgb_pil_image = pil_image.convert('RGB')
+                rgb_pil_image.save(image_path)
             except Exception as e:
                 raise HTTPException(
                     status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
@@ -94,16 +99,20 @@ class Services:
         # create folder
         os.makedirs(folder_path, exist_ok=True)
         for image in upload_images:
+            img_filename = image.filename.split(".")[-1]
+            if img_filename.lower() not in ["jpg", "jpeg", "png"]:
+                raise HTTPException(status_code=400, detail=f"Invalid image format {image.filename}")
+            
             name_image = uuid.uuid4().hex
             # save image in folder_path
             image_path = f'{folder_path}/{name_image}.jpg'
             try:
                 image_data = await image.read()
                 pil_image = Image.open(io.BytesIO(image_data))
-                pil_image.save(image_path)
+                rgb_pil_image = pil_image.convert('RGB')
+                rgb_pil_image.save(image_path)
             except Exception as e:
-                raise HTTPException(
-                    status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
+                raise HTTPException(status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
         seg_results, raw_imgs, pred_imgs = self.crack_seg_infer.infer(name_folder)
         
         inpaint_results = []
