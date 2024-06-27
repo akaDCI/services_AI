@@ -17,7 +17,7 @@ class UnetCrackSeg():
     def __init__(self):
         self.channel_means = [0.485, 0.456, 0.406]
         self.channel_stds  = [0.229, 0.224, 0.225]
-        self.threshold = 0.01
+        self.threshold = 0.1
         self.model_path = "models/model_unet_vgg_16_best.pt"
         self.model_type = "vgg16"
         self.out_pred_dir = None

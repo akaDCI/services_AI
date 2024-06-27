@@ -39,7 +39,7 @@ class RestorationController:
 
         # Check shape of mask
         is_mask_repair = False
-        if len(mask.shape) != 3:
+        if len(mask.shape) == 3:
             is_mask_repair = True
 
         s = time.time()
@@ -48,7 +48,7 @@ class RestorationController:
             f"Inferred {self.__class__.__name__} [{round(time.time() - s, 4)}s]")
 
         if save:
-            return Temper.save_pwd_image(inpainted, prefix="restore", ext=ext)
+            return Temper.save_pwd_image(cv.cvtColor(inpainted, cv.COLOR_BGR2RGB), prefix="restore", ext=ext)
 
         buffer = io.BytesIO()
         img = self.model.numpy_to_pil(inpainted)

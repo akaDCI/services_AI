@@ -4,14 +4,24 @@ import uvicorn
 from fastapi.staticfiles import StaticFiles
 from src.services import Services
 from src.utils.temp import TEMP_DIRECTORY, Temper
+import gdown
 
 
 class AIServer:
     def __init__(self):
+        # Download model when initialize
+        unet_model_path = os.path.join(os.getcwd(), "models", "model_unet_vgg_16_best.pt")
+        if not os.path.exists(unet_model_path):
+            gdown.download(id="1WfseljuUpMak1lLvyzRFIeDHSbgxv8Sn", output=unet_model_path)
+        yolo_model_path = os.path.join(os.getcwd(), "models", "yolov8x_crack_seg.pt")
+        if not os.path.exists(yolo_model_path):
+            gdown.download(id="1F-3ZAd1lluOT1quedjv2Xd00sVnSq92o", output=yolo_model_path)
+
         self.api = Services()
 
         # Create temp folder
         Temper.get_temp_dir()
+
 
         # Open temp folder for static file access
         self.api.app.mount(

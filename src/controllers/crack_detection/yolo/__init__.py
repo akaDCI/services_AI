@@ -47,6 +47,8 @@ class YoloCrackSeg():
             results = self.model.predict(source=img, conf=self.confidence_threshold, stream=True)
             img_pil = Image.fromarray(img)
 
+            # img_pil.show()
+
             # Extract the segmentation mask
             for result in results:
                 # get array results
@@ -60,7 +62,7 @@ class YoloCrackSeg():
                 # use these indices to extract the relevant masks
                 crack_masks = masks[crack_indices]
                 # scale for visualizing results
-                crack_mask = torch.any(crack_masks, dim=0).int() * 255
+                crack_mask = (torch.any(crack_masks, dim=0) * 255).to(torch.uint8)
                 # convert to numpy array
                 crack_mask = crack_mask.cpu().numpy()
                 # convert to PIL image

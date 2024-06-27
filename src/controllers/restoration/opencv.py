@@ -8,7 +8,7 @@ class OpenCVRestorationProvider(BaseRestorationProvider):
     def __init__(self, config: Dict):
         super().__init__(config)
 
-    def infer(self, src, mask, mask_repair_shape=True):
+    def infer(self, src, mask, mask_repair_shape=False):
         if isinstance(src, Image.Image):
             src = self.pil_to_numpy(src)
         if isinstance(mask, Image.Image):
@@ -19,4 +19,4 @@ class OpenCVRestorationProvider(BaseRestorationProvider):
             if mask_repair_shape:
                 mask = cv.cvtColor(mask, cv.COLOR_RGB2GRAY)
 
-        return cv.inpaint(src, mask, 3, cv.INPAINT_NS)
+        return cv.inpaint(src, mask, 3, cv.INPAINT_TELEA)

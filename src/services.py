@@ -24,7 +24,7 @@ class Services:
         # Intialize services
         self.restoration = RestorationController()
         self.crack_seg_infer = CrackSegController(
-            provider="yolo")  # unet(default) or yolo
+            provider="unet")  # unet(default) or yolo
 
         # Register routes
         self.app.get("/")(self.main)
@@ -107,6 +107,7 @@ class Services:
         # Crack inpaint
         results = []
         for _img, _mask in zip(raw_imgs, pred_imgs):
+            print(_img.dtype, _mask.dtype)
             results.append(self.restoration.infer(_img, _mask, True))
 
         return {
