@@ -8,7 +8,7 @@ import cv2 as cv
 import numpy as np
 
 
-TEMP_DIRECTORY = "data/restoration"
+TEMP_DIRECTORY = "data"
 
 
 class Temper:

@@ -20,6 +20,7 @@ class YoloCrackSeg():
 
     def infer(self, img_folder, save_results=True):
         img_dir = f"tmp/upload_files/{img_folder}"
+        seg_results = []
 
         if save_results:
             self.out_pred_dir = f"{self.crack_predict_results}/{img_folder}"
@@ -76,6 +77,7 @@ class YoloCrackSeg():
 
                 if self.out_pred_dir is not None:
                     seg_image_pil.convert('RGB').save(join(self.out_pred_dir, f'yolo_{img_path.stem}.jpg'))
+                    seg_results.append(join(self.out_pred_dir, f'yolo_{img_path.stem}.jpg'))
 
                 if self.out_viz_dir is not None:
                     fig = plt.figure(figsize=(10, 5))
@@ -90,4 +92,6 @@ class YoloCrackSeg():
                     plt.savefig(join(self.out_viz_dir, f'yolo_{img_path.stem}.jpg'), dpi=500)
                     plt.close('all')
 
-        return raw_arr_imgs, pred_arr_imgs
+                    seg_results.append(join(self.out_viz_dir, f'yolo_{img_path.stem}.jpg'))
+
+        return seg_results, raw_arr_imgs, pred_arr_imgs

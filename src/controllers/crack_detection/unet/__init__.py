@@ -1,4 +1,5 @@
 import os
+import torch
 import numpy as np
 from pathlib import Path
 import cv2 as cv
@@ -24,6 +25,7 @@ class UnetCrackSeg():
         self.out_viz_dir = None
         self.crack_predict_results = "data/crack_results/crack_predict_results"
         self.crack_viz_results = "data/crack_results/crack_viz_results"
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.train_tfms = transforms.Compose([transforms.ToTensor(), transforms.Normalize(self.channel_means, self.channel_stds)])
 
@@ -33,54 +35,19 @@ class UnetCrackSeg():
 
         img_1 = cv.resize(img, (input_width, input_height), cv.INTER_AREA)
         X = self.train_tfms(Image.fromarray(img_1))
-        X = Variable(X.unsqueeze(0)).cuda()  # [N, 1, H, W]
+
+        # Ensure the model is on CPU
+        if self.device == torch.device('cpu'):
+            X = Variable(X.unsqueeze(0)).cpu()  # [N, 1, H, W]
+            model = model.cpu()
+        else:
+            X = Variable(X.unsqueeze(0)).cuda()  # [N, 1, H, W]
 
         mask = model(X)
 
         mask = F.sigmoid(mask[0, 0]).data.cpu().numpy()
         mask = cv.resize(mask, (img_width, img_height), cv.INTER_AREA)
         return mask
-
-    def _evaluate_img_patch(self, model, img):
-        input_width, input_height = input_size[0], input_size[1]
-
-        img_height, img_width, img_channels = img.shape
-
-        if img_width < input_width or img_height < input_height:
-            return self._evaluate_img(model, img)
-
-        stride_ratio = 0.1
-        stride = int(input_width * stride_ratio)
-
-        normalization_map = np.zeros((img_height, img_width), dtype=np.int16)
-
-        patches = []
-        patch_locs = []
-        for y in range(0, img_height - input_height + 1, stride):
-            for x in range(0, img_width - input_width + 1, stride):
-                segment = img[y:y + input_height, x:x + input_width]
-                normalization_map[y:y + input_height, x:x + input_width] += 1
-                patches.append(segment)
-                patch_locs.append((x, y))
-
-        patches = np.array(patches)
-        if len(patch_locs) <= 0:
-            return None
-
-        preds = []
-        for i, patch in enumerate(patches):
-            patch_n = self.train_tfms(Image.fromarray(patch))
-            X = Variable(patch_n.unsqueeze(0)).cuda()  # [N, 1, H, W]
-            masks_pred = model(X)
-            mask = F.sigmoid(masks_pred[0, 0]).data.cpu().numpy()
-            preds.append(mask)
-
-        probability_map = np.zeros((img_height, img_width), dtype=float)
-        for i, response in enumerate(preds):
-            coords = patch_locs[i]
-            probability_map[coords[1]:coords[1] + input_height, coords[0]:coords[0] + input_width] += response
-
-        return probability_map
 
     def _disable_axis(self):
         plt.axis('off')
@@ -91,6 +58,7 @@ class UnetCrackSeg():
 
     def infer(self, img_folder, save_results=True):
         img_dir = f"tmp/upload_files/{img_folder}"
+        seg_results = []
 
         if save_results:
             self.out_pred_dir = f"{self.crack_predict_results}/{img_folder}"
@@ -145,7 +113,8 @@ class UnetCrackSeg():
             pred_arr_imgs.append(crack_mask)
 
             if self.out_pred_dir is not None:
-                crack_mask_pil.save(join(self.out_pred_dir, f'unet_{img_path.stem}.jpg'))
+                crack_mask_pil.save(join(self.out_pred_dir, f'{img_path.stem}_mask.jpg'))
+                seg_results.append(join(self.out_pred_dir, f'{img_path.stem}_mask.jpg'))
 
             if self.out_viz_dir is not None:
                 fig = plt.figure(figsize=(10, 5))
@@ -157,9 +126,10 @@ class UnetCrackSeg():
                 ax = fig.add_subplot(133)
                 ax.imshow(img_pil)
                 ax.imshow(prob_map_viz_full, alpha=0.4)
-                plt.savefig(join(self.out_viz_dir, f'unet_{img_path.stem}.jpg'), dpi=500)
+                plt.savefig(join(self.out_viz_dir, f'{img_path.stem}_viz.jpg'), dpi=500)
                 plt.close('all')
 
+                seg_results.append(join(self.out_viz_dir, f'{img_path.stem}_viz.jpg'))
             gc.collect()
 
-        return raw_arr_imgs, pred_arr_imgs
+        return seg_results, raw_arr_imgs, pred_arr_imgs

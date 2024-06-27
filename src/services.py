@@ -79,8 +79,9 @@ class Services:
             except Exception as e:
                 raise HTTPException(
                     status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
-        raw_imgs, pred_imgs = self.crack_seg_infer.infer(name_folder)
-        return {"msg": "Success"}
+        seg_results, raw_imgs, pred_imgs = self.crack_seg_infer.infer(name_folder)
+        return {"msg": "Success",
+                "seg_results":  seg_results}
 
     async def infer(self, upload_images: list[UploadFile] = File(...)):
         """
@@ -89,6 +90,7 @@ class Services:
         # Crack detection
         name_folder = uuid.uuid4().hex
         folder_path = f"tmp/upload_files/{name_folder}"
+        
         # create folder
         os.makedirs(folder_path, exist_ok=True)
         for image in upload_images:
@@ -102,16 +104,18 @@ class Services:
             except Exception as e:
                 raise HTTPException(
                     status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
-        raw_imgs, pred_imgs = self.crack_seg_infer.infer(name_folder)
-
+        seg_results, raw_imgs, pred_imgs = self.crack_seg_infer.infer(name_folder)
+        
+        inpaint_results = []
         # Crack inpaint
-        results = []
         for _img, _mask in zip(raw_imgs, pred_imgs):
             print(_img.dtype, _mask.dtype)
-            results.append(self.restoration.infer(_img, _mask, True))
+            inpaint_results.append(self.restoration.infer(_img, _mask, True))
 
         return {
-            "paths": results
+            "msg": "Success",
+            "seg_results":  seg_results,
+            "inpaint_results": inpaint_results
         }
 
     @property
