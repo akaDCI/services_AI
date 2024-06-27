@@ -6,6 +6,7 @@ click==8.1.7
 colorama==0.4.6
 contourpy==1.2.1
 cycler==0.12.1
+dill==0.3.8
 dnspython==2.6.1
 email_validator==2.2.0
 fastapi==0.111.0

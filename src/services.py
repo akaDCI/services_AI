@@ -23,10 +23,12 @@ class Services:
         """Post init"""
         # Intialize services
         self.restoration = RestorationController()
-        self.crack_seg_infer = CrackSegController(provider="yolo") # unet(default) or yolo
+        self.crack_seg_infer = CrackSegController(
+            provider="yolo")  # unet(default) or yolo
 
         # Register routes
         self.app.get("/")(self.main)
+        self.app.post("/infer")(self.infer)
         self.app.post("/api/restore")(self.restoration_infer)
         self.app.post("/api/crack_seg")(self.crackseg_infer)
 
@@ -57,7 +59,7 @@ class Services:
             })
 
         return StreamingResponse(result, media_type="application/octet-stream", headers={"Content-Disposition": f"attachment;filename={image.filename}"})
-    
+
     async def crackseg_infer(self, upload_images: list[UploadFile] = File(...)):
         """
         Crack segmentation
@@ -65,7 +67,7 @@ class Services:
         name_folder = uuid.uuid4().hex
         folder_path = f"tmp/upload_files/{name_folder}"
         # create folder
-        os.mkdir(folder_path)
+        os.makedirs(folder_path, exist_ok=True)
         for image in upload_images:
             name_image = uuid.uuid4().hex
             # save image in folder_path
@@ -75,9 +77,41 @@ class Services:
                 pil_image = Image.open(io.BytesIO(image_data))
                 pil_image.save(image_path)
             except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
+                raise HTTPException(
+                    status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
         raw_imgs, pred_imgs = self.crack_seg_infer.infer(name_folder)
         return {"msg": "Success"}
+
+    async def infer(self, upload_images: list[UploadFile] = File(...)):
+        """
+        Pipeline inference
+        """
+        # Crack detection
+        name_folder = uuid.uuid4().hex
+        folder_path = f"tmp/upload_files/{name_folder}"
+        # create folder
+        os.makedirs(folder_path, exist_ok=True)
+        for image in upload_images:
+            name_image = uuid.uuid4().hex
+            # save image in folder_path
+            image_path = f'{folder_path}/{name_image}.jpg'
+            try:
+                image_data = await image.read()
+                pil_image = Image.open(io.BytesIO(image_data))
+                pil_image.save(image_path)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
+        raw_imgs, pred_imgs = self.crack_seg_infer.infer(name_folder)
+
+        # Crack inpaint
+        results = []
+        for _img, _mask in zip(raw_imgs, pred_imgs):
+            results.append(self.restoration.infer(_img, _mask, True))
+
+        return {
+            "paths": results
+        }
 
     @property
     def __call__(self):

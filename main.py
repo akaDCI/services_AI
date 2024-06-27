@@ -3,12 +3,15 @@ import logging
 import uvicorn
 from fastapi.staticfiles import StaticFiles
 from src.services import Services
-from src.utils.temp import TEMP_DIRECTORY
+from src.utils.temp import TEMP_DIRECTORY, Temper
 
 
 class AIServer:
     def __init__(self):
         self.api = Services()
+
+        # Create temp folder
+        Temper.get_temp_dir()
 
         # Open temp folder for static file access
         self.api.app.mount(
