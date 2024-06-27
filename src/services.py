@@ -23,12 +23,12 @@ class Services:
         """Post init"""
         # Intialize services
         self.restoration = RestorationController()
-        self.unet_crack_seg_infer = CrackSegController()
+        self.crack_seg_infer = CrackSegController(provider="yolo") # unet(default) or yolo
 
         # Register routes
         self.app.get("/")(self.main)
         self.app.post("/api/restore")(self.restoration_infer)
-        self.app.post("/api/crack_seg")(self.crack_seg_infer)
+        self.app.post("/api/crack_seg")(self.crackseg_infer)
 
     async def main(self, request: Request, response: Response):
         """
@@ -58,7 +58,7 @@ class Services:
 
         return StreamingResponse(result, media_type="application/octet-stream", headers={"Content-Disposition": f"attachment;filename={image.filename}"})
     
-    async def crack_seg_infer(self, upload_images: list[UploadFile] = File(...)):
+    async def crackseg_infer(self, upload_images: list[UploadFile] = File(...)):
         """
         Crack segmentation
         """
@@ -76,7 +76,7 @@ class Services:
                 pil_image.save(image_path)
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
-        raw_imgs, pred_imgs = self.unet_crack_seg_infer.infer(name_folder)
+        raw_imgs, pred_imgs = self.crack_seg_infer.infer(name_folder)
         return {"msg": "Success"}
 
     @property
