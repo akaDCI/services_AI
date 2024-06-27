@@ -37,8 +37,13 @@ class RestorationController:
         if isinstance(mask, bytes):
             mask = cv.imdecode(np.frombuffer(mask, np.uint8), -1)
 
+        # Check shape of mask
+        is_mask_repair = False
+        if len(mask.shape) != 3:
+            is_mask_repair = True
+
         s = time.time()
-        inpainted = self.model.infer(src, mask)
+        inpainted = self.model.infer(src, mask, is_mask_repair)
         logging.info(
             f"Inferred {self.__class__.__name__} [{round(time.time() - s, 4)}s]")
 
