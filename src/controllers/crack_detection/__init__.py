@@ -1,8 +1,8 @@
 import time
 import logging
 import shutil
-from src.controllers.crack_detection.unet.dci_infer import UnetCrackSeg
-
+from src.controllers.crack_detection.unet import UnetCrackSeg
+from src.controllers.crack_detection.yolo import YoloCrackSeg
 class CrackSegController:
     def __init__(self, provider: str = "unet"):
         self.provider = provider
@@ -12,7 +12,7 @@ class CrackSegController:
         if provider == "unet":
             return UnetCrackSeg()
         elif provider == "yolo":
-            pass
+            return YoloCrackSeg()
         else:
             raise ValueError(f"Provider {provider} is invalid!")
 
