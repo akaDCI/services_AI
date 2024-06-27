@@ -74,8 +74,8 @@ def load_unet_vgg16(model_path):
         model.load_state_dict(checkpoint['check_point'])
     else:
         raise Exception('undefind model format')
-
-    model.cuda()
+    if torch.cuda.is_available():
+        model.cuda()
     model.eval()
 
     return model

@@ -16,7 +16,7 @@ import seaborn as sns
 
 import time
 
-from  extracting_candidate_frames import Configs as config
+from src.controllers.extract_keyframe.extracting_candidate_frames import Configs as config
 
 
 class ImageSelector(object):
