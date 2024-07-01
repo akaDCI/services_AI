@@ -10,6 +10,9 @@ import gdown
 class AIServer:
     def __init__(self):
         # Download model when initialize
+        seg_former_model_path = os.path.join(os.getcwd(), "models", "seg_former.onnx")
+        if not os.path.exists(seg_former_model_path):
+            gdown.download(id="1K6pE3fexH25ek4OrrUbvIvqpg7YM1AXv", output=seg_former_model_path)
         unet_model_path = os.path.join(os.getcwd(), "models", "model_unet_vgg_16_best.pt")
         if not os.path.exists(unet_model_path):
             gdown.download(id="1WfseljuUpMak1lLvyzRFIeDHSbgxv8Sn", output=unet_model_path)

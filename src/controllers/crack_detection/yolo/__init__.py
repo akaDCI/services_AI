@@ -10,9 +10,9 @@ import numpy as np
 import torch
 
 class YoloCrackSeg():
-    def __init__(self) -> None:
+    def __init__(self,confidence_threshold = 0.25) -> None:
         self.model = YOLO("models/yolov8x_crack_seg.pt")
-        self.confidence_threshold = 0.25
+        self.confidence_threshold = confidence_threshold
         self.out_pred_dir = None
         self.out_viz_dir = None
         self.crack_predict_results = "data/crack_results/crack_predict_results"

@@ -3,18 +3,19 @@ import logging
 import shutil
 from src.controllers.crack_detection.unet import UnetCrackSeg
 from src.controllers.crack_detection.yolo import YoloCrackSeg
+from src.controllers.crack_detection.seg_former import FormerCrackSeg
 class CrackSegController:
     def __init__(self, provider: str = "unet"):
         self.provider = provider
         self.model = self.__get_provider(provider)
 
-    def __get_provider(self, provider: str):
+    def __get_provider(self, provider: str = "default"):
         if provider == "unet":
             return UnetCrackSeg()
         elif provider == "yolo":
             return YoloCrackSeg()
         else:
-            raise ValueError(f"Provider {provider} is invalid!")
+            return FormerCrackSeg()
 
     def infer(self, img_folder):
         img_dir = f"tmp/upload_files/{img_folder}"

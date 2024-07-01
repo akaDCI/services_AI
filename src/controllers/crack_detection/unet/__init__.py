@@ -12,13 +12,15 @@ from os.path import join
 from PIL import Image
 import gc
 import shutil
+from copy import deepcopy
+
 from src.controllers.crack_detection.unet.utils import load_unet_vgg16, load_unet_resnet_101, load_unet_resnet_34
 
 class UnetCrackSeg():
-    def __init__(self):
+    def __init__(self, threshold = 0.2):
         self.channel_means = [0.485, 0.456, 0.406]
         self.channel_stds  = [0.229, 0.224, 0.225]
-        self.threshold = 0.1
+        self.threshold = threshold*225
         self.model_path = "models/model_unet_vgg_16_best.pt"
         self.model_type = "vgg16"
         self.out_pred_dir = None
@@ -48,13 +50,6 @@ class UnetCrackSeg():
         mask = F.sigmoid(mask[0, 0]).data.cpu().numpy()
         mask = cv.resize(mask, (img_width, img_height), cv.INTER_AREA)
         return mask
-
-    def _disable_axis(self):
-        plt.axis('off')
-        plt.gca().axes.get_xaxis().set_visible(False)
-        plt.gca().axes.get_yaxis().set_visible(False)
-        plt.gca().axes.get_xaxis().set_ticklabels([])
-        plt.gca().axes.get_yaxis().set_ticklabels([])
 
     def infer(self, img_folder, save_results=True):
         img_dir = f"tmp/upload_files/{img_folder}"
@@ -99,26 +94,26 @@ class UnetCrackSeg():
 
             prob_map_full = self._evaluate_img(model, img)
 
-            crack_mask = (prob_map_full * 255).astype(np.uint8)
-            prob_map_viz_full = prob_map_full.copy()
-            prob_map_viz_full = prob_map_viz_full/ prob_map_viz_full.max()
-            prob_map_viz_full[prob_map_viz_full < self.threshold] = 0.0
-
-            # convert to PIL image
-            crack_mask_pil = Image.fromarray(crack_mask)
-            img_pil = Image.fromarray(img)
+            crack_mask = prob_map_full * 255
+            prob_map_viz_full = deepcopy(crack_mask)
+            prob_map_viz_full[prob_map_viz_full < self.threshold] = 0
+            pred_arr_img = (prob_map_viz_full).astype(np.uint8)
 
             # add to array
             raw_arr_imgs.append(img)
-            pred_arr_imgs.append(crack_mask)
+            pred_arr_imgs.append(pred_arr_img)
+
+            # convert to PIL image
+            crack_mask_pil = Image.fromarray(pred_arr_img)
+            img_pil = Image.fromarray(img)
 
             if self.out_pred_dir is not None:
-                crack_mask_pil.save(join(self.out_pred_dir, f'{img_path.stem}_mask.jpg'))
-                seg_results.append(join(self.out_pred_dir, f'{img_path.stem}_mask.jpg'))
+                crack_mask_pil.save(join(self.out_pred_dir, f'unet_{img_path.stem}_mask.jpg'))
+                seg_results.append(join(self.out_pred_dir, f'unet_{img_path.stem}_mask.jpg'))
 
             if self.out_viz_dir is not None:
                 fig = plt.figure(figsize=(10, 5))
-                fig.suptitle(f'Unet_VGG16 Model \n img={img_path.stem} \n threshold = {self.threshold}')
+                fig.suptitle(f'Unet_VGG16 Model \n img={img_path.stem} \n threshold = {self.threshold/225}')
                 ax = fig.add_subplot(131)
                 ax.imshow(img_pil)
                 ax = fig.add_subplot(132)
@@ -126,10 +121,11 @@ class UnetCrackSeg():
                 ax = fig.add_subplot(133)
                 ax.imshow(img_pil)
                 ax.imshow(prob_map_viz_full, alpha=0.4)
-                plt.savefig(join(self.out_viz_dir, f'{img_path.stem}_viz.jpg'), dpi=500)
+                # plt.show()
+                plt.savefig(join(self.out_viz_dir, f'unet_{img_path.stem}_viz.jpg'), dpi=500)
                 plt.close('all')
 
-                seg_results.append(join(self.out_viz_dir, f'{img_path.stem}_viz.jpg'))
+                seg_results.append(join(self.out_viz_dir, f'unet_{img_path.stem}_viz.jpg'))
             gc.collect()
 
         return seg_results, raw_arr_imgs, pred_arr_imgs
