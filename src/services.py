@@ -23,8 +23,7 @@ class Services:
         """Post init"""
         # Intialize services
         self.restoration = RestorationController()
-        self.crack_seg_infer = CrackSegController(
-            provider="unet")  # unet(default) or yolo
+        self.crack_seg_infer = CrackSegController(provider="default")  # default or unet or yolo
 
         # Register routes
         self.app.get("/")(self.main)
