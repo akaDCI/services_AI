@@ -11,7 +11,7 @@ import cv2 as cv
 
 
 class FormerCrackSeg():
-    def __init__(self, threshold=0.7):
+    def __init__(self, threshold=0.5):
         self.model_path = "models/seg_former.onnx"
         self.session = ort.InferenceSession(self.model_path)
         self.input_model_shape = self.session.get_inputs()[0].shape

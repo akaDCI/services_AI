@@ -83,7 +83,7 @@ class Services:
         # Else, save file locally and return path
         _paths = save_images("restore", inpainteds)
         return ORJSONResponse({
-            "path": _paths
+            "paths": _paths
         })
 
         # if stream == False:
@@ -121,7 +121,12 @@ class Services:
         return {"msg": "Success",
                 "seg_results":  seg_results}
 
-    async def infer(self, upload_images: list[UploadFile] = File(...)):
+    async def infer(
+        self,
+        images: Annotated[List[UploadFile], File(...)],
+        restoration_provider: Annotated[InferenceProvider, Form()] = "crfill",
+        restoration_server: Annotated[InferenceServer, Form()] = "torch"
+    ):
         """
         Pipeline inference
         """
@@ -131,7 +136,7 @@ class Services:
 
         # create folder
         os.makedirs(folder_path, exist_ok=True)
-        for image in upload_images:
+        for image in images:
             img_filename = image.filename.split(".")[-1]
             if img_filename.lower() not in ["jpg", "jpeg", "png"]:
                 raise HTTPException(
@@ -151,11 +156,10 @@ class Services:
         seg_results, raw_imgs, pred_imgs = self.crack_seg_infer.infer(
             name_folder)
 
-        inpaint_results = []
         # Crack inpaint
-        for _img, _mask in zip(raw_imgs, pred_imgs):
-            print(_img.dtype, _mask.dtype)
-            inpaint_results.append(self.restoration.infer(_img, _mask, True))
+        inpainteds = self.restoration.infer(
+            raw_imgs, pred_imgs, restoration_provider, restoration_server, return_type="pillow", preserved_color=True)
+        inpaint_results = save_images("restoration", inpainteds)
 
         return {
             "msg": "Success",

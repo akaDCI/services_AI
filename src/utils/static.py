@@ -3,7 +3,7 @@ import uuid
 from PIL import Image
 
 
-StaticDirectory = "static"
+StaticDirectory = "data"
 
 
 def create_directory(path: str) -> str:

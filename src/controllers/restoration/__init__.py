@@ -100,7 +100,7 @@ class RestorationController:
             byte_arrays.append(byte_array)
         return byte_arrays
 
-    def __array_to_pillow(self, inpainteds) -> List[Image.Image]:
+    def __array_to_pillow(self, inpainteds, preserved_color=False) -> List[Image.Image]:
         """
         Convert a list of NumPy arrays to a list of PIL images.
 
@@ -110,7 +110,9 @@ class RestorationController:
         pil_images = []
         for array in inpainteds:
             # Convert NumPy array to PIL Image
-            image = Image.fromarray(cv.cvtColor(array, cv.COLOR_BGR2RGB))
+            if not preserved_color:
+                array = cv.cvtColor(array, cv.COLOR_BGR2RGB)
+            image = Image.fromarray(array)
             pil_images.append(image)
         return pil_images
 
@@ -120,7 +122,8 @@ class RestorationController:
         masks: List[Union[bytes, npt.NDArray, Image.Image]],
         provider: InferenceProvider = InferenceProvider.CRFill,
         server: InferenceServer = InferenceServer.Torch,
-        return_type: Literal['bytes', 'array', 'pillow'] = "array"
+        return_type: Literal['bytes', 'array', 'pillow'] = "array",
+        **kwargs
     ) -> List[Union[bytes, npt.NDArray, Image.Image]]:
         # Convert to array
         _images, _masks = [], []
@@ -146,7 +149,7 @@ class RestorationController:
                 else:
                     raise ValueError(
                         f"Image must have 3 dimensions. Found {image.shape}")
-            if len(mask.shape) != 1:
+            if len(mask.shape) != 2:
                 if len(mask.shape) == 3:
                     # Convert to single channel mask
                     mask = cv.cvtColor(mask, cv.COLOR_RGB2GRAY)
@@ -154,7 +157,7 @@ class RestorationController:
                     mask = cv.cvtColor(mask, cv.COLOR_RGBA2GRAY)
                 else:
                     raise ValueError(
-                        f"Mask must have 1 dimension. Found {mask.shape}")
+                        f"Mask must have 2 dimension. Found {mask.shape}")
 
             _images.append(np.array(image))
             _masks.append(np.array(mask))
@@ -172,4 +175,4 @@ class RestorationController:
         if return_type == "bytes":
             return self.__array_to_bytes(inpainteds)
         if return_type == "pillow":
-            return self.__array_to_pillow(inpainteds)
+            return self.__array_to_pillow(inpainteds, preserved_color=kwargs.get("preserved_color", False))
