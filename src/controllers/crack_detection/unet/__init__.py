@@ -16,10 +16,11 @@ from copy import deepcopy
 
 from src.controllers.crack_detection.unet.utils import load_unet_vgg16, load_unet_resnet_101, load_unet_resnet_34
 
+
 class UnetCrackSeg():
-    def __init__(self, threshold = 0.2):
+    def __init__(self, threshold=0.2):
         self.channel_means = [0.485, 0.456, 0.406]
-        self.channel_stds  = [0.229, 0.224, 0.225]
+        self.channel_stds = [0.229, 0.224, 0.225]
         self.threshold = threshold*225
         self.model_path = "models/model_unet_vgg_16_best.pt"
         self.model_type = "vgg16"
@@ -27,9 +28,11 @@ class UnetCrackSeg():
         self.out_viz_dir = None
         self.crack_predict_results = "data/crack_results/crack_predict_results"
         self.crack_viz_results = "data/crack_results/crack_viz_results"
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu")
 
-        self.train_tfms = transforms.Compose([transforms.ToTensor(), transforms.Normalize(self.channel_means, self.channel_stds)])
+        self.train_tfms = transforms.Compose([transforms.ToTensor(
+        ), transforms.Normalize(self.channel_means, self.channel_stds)])
 
     def _evaluate_img(self, model, img):
         img_height, img_width, img_channels = img.shape
@@ -71,9 +74,9 @@ class UnetCrackSeg():
 
         if self.model_type == 'vgg16':
             model = load_unet_vgg16(self.model_path)
-        elif self.model_type  == 'resnet101':
+        elif self.model_type == 'resnet101':
             model = load_unet_resnet_101(self.model_path)
-        elif self.model_type  == 'resnet34':
+        elif self.model_type == 'resnet34':
             model = load_unet_resnet_34(self.model_path)
         else:
             raise ValueError(f"Model {self.model_type} is invalid!")
@@ -85,12 +88,14 @@ class UnetCrackSeg():
             img = Image.open(str(img_path))
             img = np.asarray(img)
             if len(img.shape) != 3:
-                raise ValueError(f'incorrect image shape: {img_path.name}{img.shape}')
-            
-            if img.shape[0] > 2000 or img.shape[1] > 2000:
-                img = cv.resize(img, None, fx=0.2, fy=0.2, interpolation=cv.INTER_AREA)
+                raise ValueError(
+                    f'incorrect image shape: {img_path.name}{img.shape}')
 
-            img = img[:,:,:3]
+            if img.shape[0] > 2000 or img.shape[1] > 2000:
+                img = cv.resize(img, None, fx=0.2, fy=0.2,
+                                interpolation=cv.INTER_AREA)
+
+            img = img[:, :, :3]
 
             prob_map_full = self._evaluate_img(model, img)
 
@@ -108,12 +113,15 @@ class UnetCrackSeg():
             img_pil = Image.fromarray(img)
 
             if self.out_pred_dir is not None:
-                crack_mask_pil.save(join(self.out_pred_dir, f'unet_{img_path.stem}_mask.jpg'))
-                seg_results.append(join(self.out_pred_dir, f'unet_{img_path.stem}_mask.jpg'))
+                crack_mask_pil.save(
+                    join(self.out_pred_dir, f'unet_{img_path.stem}_mask.jpg'))
+                seg_results.append(
+                    join(self.out_pred_dir, f'unet_{img_path.stem}_mask.jpg'))
 
             if self.out_viz_dir is not None:
                 fig = plt.figure(figsize=(10, 5))
-                fig.suptitle(f'Unet_VGG16 Model \n img={img_path.stem} \n threshold = {self.threshold/225}')
+                fig.suptitle(
+                    f'Unet_VGG16 Model \n img={img_path.stem} \n threshold = {self.threshold/225}')
                 ax = fig.add_subplot(131)
                 ax.imshow(img_pil)
                 ax = fig.add_subplot(132)
@@ -122,10 +130,12 @@ class UnetCrackSeg():
                 ax.imshow(img_pil)
                 ax.imshow(prob_map_viz_full, alpha=0.4)
                 # plt.show()
-                plt.savefig(join(self.out_viz_dir, f'unet_{img_path.stem}_viz.jpg'), dpi=500)
+                plt.savefig(
+                    join(self.out_viz_dir, f'unet_{img_path.stem}_viz.jpg'), dpi=500)
                 plt.close('all')
 
-                seg_results.append(join(self.out_viz_dir, f'unet_{img_path.stem}_viz.jpg'))
+                seg_results.append(
+                    join(self.out_viz_dir, f'unet_{img_path.stem}_viz.jpg'))
             gc.collect()
 
         return seg_results, raw_arr_imgs, pred_arr_imgs
