@@ -23,7 +23,8 @@ class Services:
         """Post init"""
         # Intialize services
         self.restoration = RestorationController()
-        self.crack_seg_infer = CrackSegController(provider="default")  # default or unet or yolo
+        self.crack_seg_infer = CrackSegController(
+            provider="default")  # default or unet or yolo
 
         # Register routes
         self.app.get("/")(self.main)
@@ -70,8 +71,9 @@ class Services:
         for image in upload_images:
             img_filename = image.filename.split(".")[-1]
             if img_filename.lower() not in ["jpg", "jpeg", "png"]:
-                raise HTTPException(status_code=400, detail=f"Invalid image format {image.filename}")
-            
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid image format {image.filename}")
+
             name_image = uuid.uuid4().hex
             # save image in folder_path
             image_path = f'{folder_path}/{name_image}.jpg'
@@ -83,7 +85,8 @@ class Services:
             except Exception as e:
                 raise HTTPException(
                     status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
-        seg_results, raw_imgs, pred_imgs = self.crack_seg_infer.infer(name_folder)
+        seg_results, raw_imgs, pred_imgs = self.crack_seg_infer.infer(
+            name_folder)
         return {"msg": "Success",
                 "seg_results":  seg_results}
 
@@ -94,14 +97,15 @@ class Services:
         # Crack detection
         name_folder = uuid.uuid4().hex
         folder_path = f"tmp/upload_files/{name_folder}"
-        
+
         # create folder
         os.makedirs(folder_path, exist_ok=True)
         for image in upload_images:
             img_filename = image.filename.split(".")[-1]
             if img_filename.lower() not in ["jpg", "jpeg", "png"]:
-                raise HTTPException(status_code=400, detail=f"Invalid image format {image.filename}")
-            
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid image format {image.filename}")
+
             name_image = uuid.uuid4().hex
             # save image in folder_path
             image_path = f'{folder_path}/{name_image}.jpg'
@@ -111,9 +115,11 @@ class Services:
                 rgb_pil_image = pil_image.convert('RGB')
                 rgb_pil_image.save(image_path)
             except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
-        seg_results, raw_imgs, pred_imgs = self.crack_seg_infer.infer(name_folder)
-        
+                raise HTTPException(
+                    status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
+        seg_results, raw_imgs, pred_imgs = self.crack_seg_infer.infer(
+            name_folder)
+
         inpaint_results = []
         # Crack inpaint
         for _img, _mask in zip(raw_imgs, pred_imgs):

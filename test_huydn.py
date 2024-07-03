@@ -6,8 +6,8 @@ from src.controllers.extract_keyframe import KeyFrameExtractor
 # yolo_seg = YoloCrackSeg()
 # yolo_seg.infer("binh_nut")
 
-unet_seg = UnetCrackSeg(threshold = 0.25)
-unet_seg.infer("binh_nut")
+# unet_seg = UnetCrackSeg(threshold = 0.25)
+# unet_seg.infer("binh_nut")
 
 # former_seg = FormerCrackSeg()
 # former_seg.infer("binh_nut")
