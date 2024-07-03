@@ -4,12 +4,15 @@ from .._base import BaseRestorationProvider, BaseConfig
 from .._enum import InferenceServer
 from .model import BaseConvGenerator
 from src.utils.torch_infer import torch_inference
+from src.utils.onnx_infer import onnx_interence_session, onnx_inference
 from src.utils.downloader import download_model_from_drive
 
 
 class DefaultConfig(BaseConfig):
-    drive_id = "1Mr_AysRFFim5BHeQOhO9zZkuZ2eMAaBR"
-    model_name = "crfill.pth"
+    torch_model_id = "1Mr_AysRFFim5BHeQOhO9zZkuZ2eMAaBR"
+    torch_model_name = "crfill.pth"
+    onnx_model_id = "1jjXsN5p4gWKXm_xuW5MlxkLASxygw470"
+    onnx_model_name = "crfill.onnx"
 
 
 class CRFillRestorationProvider(BaseRestorationProvider):
@@ -18,12 +21,16 @@ class CRFillRestorationProvider(BaseRestorationProvider):
 
     def initialize(self, *args, **kwargs):
         self.model = BaseConvGenerator()
-        # Download model
+        # Download torch model
         _model_path = download_model_from_drive(
-            self.config.drive_id, self.config.model_name)
-        # Load checkpoint
+            self.config.torch_model_id, self.config.torch_model_name)
+        # Load torch checkpoint
         _model_state = torch.load(_model_path)
         self.model.load_state_dict(_model_state)
+        # Download onnx model
+        _model_path = download_model_from_drive(
+            self.config.onnx_model_id, self.config.onnx_model_name)
+        self.onnx_session = onnx_interence_session(_model_path)
 
     def infer(self, images, masks, server):
         if server == InferenceServer.Torch:
@@ -41,7 +48,17 @@ class CRFillRestorationProvider(BaseRestorationProvider):
             return [i.transpose((1, 2, 0)) for i in inpainteds]
 
         elif server == InferenceServer.Onnx:
-            raise NotImplementedError("Onnx in CRFill is not implemented")
+            # Preprocessing
+            imgs = (np.array(images).transpose(
+                0, 3, 1, 2) / 255).astype(np.float32)
+            mks = np.expand_dims(np.array(masks), axis=1).astype(np.float32)
+
+            # Inference
+            inpainteds = onnx_inference(self.onnx_session, imgs, mks)
+
+            # Postprocessing
+            inpainteds = inpainteds.astype(np.uint8)
+            return [i.transpose((1, 2, 0)) for i in inpainteds]
 
         elif server == InferenceServer.Triton:
             raise NotImplementedError("Triton in CRFill is not implemented")
