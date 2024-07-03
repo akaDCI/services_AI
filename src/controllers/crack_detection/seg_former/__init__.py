@@ -8,12 +8,13 @@ import math
 import matplotlib.pyplot as plt
 from copy import deepcopy
 import cv2 as cv
+from src.utils.onnx_infer import onnx_interence_session, onnx_inference
 
 
 class FormerCrackSeg():
-    def __init__(self, threshold=0.5):
+    def __init__(self, threshold=0.65):
         self.model_path = "models/seg_former.onnx"
-        self.session = ort.InferenceSession(self.model_path)
+        self.session = onnx_interence_session(self.model_path)
         self.input_model_shape = self.session.get_inputs()[0].shape
         self.output_model_shape = self.session.get_outputs()[0].shape
         self.input_model_name = self.session.get_inputs()[0].name
@@ -66,9 +67,8 @@ class FormerCrackSeg():
             input_data = self._preprocess_image(pil_img)
 
             # Run inference
-            ort_inputs = {self.input_model_name: input_data}
-            prediction = self.session.run([self.output_model_name], ort_inputs)
-            mask_seg_prediction = prediction[0][:, :, 1]
+            prediction = onnx_inference(self.session, input_data)
+            mask_seg_prediction = prediction[:, :, 1]
             mask_seg = cv.resize(mask_seg_prediction,
                                  (image_w, image_h), cv.INTER_AREA)
 
