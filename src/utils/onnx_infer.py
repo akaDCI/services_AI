@@ -5,7 +5,7 @@ import numpy.typing as npt
 
 def onnx_interence_session(model_path: str):
     return onnxruntime.InferenceSession(model_path, providers=[
-        "CPUExecutionProvider", "CUDAExecutionProvider", "AzureExecutionProvider"
+        "CPUExecutionProvider", "AzureExecutionProvider"
     ])
 
 

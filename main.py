@@ -10,22 +10,23 @@ import gdown
 class AIServer:
     def __init__(self):
         # Download model when initialize
-        seg_former_model_path = os.path.join(
-            os.getcwd(), "models", "seg_former.onnx")
-        if not os.path.exists(seg_former_model_path):
-            gdown.download(id="1K6pE3fexH25ek4OrrUbvIvqpg7YM1AXv",
-                           output=seg_former_model_path)
-        unet_model_path = os.path.join(
-            os.getcwd(), "models", "model_unet_vgg_16_best.pt")
-        if not os.path.exists(unet_model_path):
-            gdown.download(id="1WfseljuUpMak1lLvyzRFIeDHSbgxv8Sn",
-                           output=unet_model_path)
-        yolo_model_path = os.path.join(
-            os.getcwd(), "models", "yolov8x_crack_seg.pt")
-        if not os.path.exists(yolo_model_path):
-            gdown.download(id="1F-3ZAd1lluOT1quedjv2Xd00sVnSq92o",
-                           output=yolo_model_path)
+        # seg_former_model_path = os.path.join(
+        #     os.getcwd(), "models", "seg_former.onnx")
+        # if not os.path.exists(seg_former_model_path):
+        #     gdown.download(id="1K6pE3fexH25ek4OrrUbvIvqpg7YM1AXv",
+        #                    output=seg_former_model_path)
+        # unet_model_path = os.path.join(
+        #     os.getcwd(), "models", "model_unet_vgg_16_best.pt")
+        # if not os.path.exists(unet_model_path):
+        #     gdown.download(id="1WfseljuUpMak1lLvyzRFIeDHSbgxv8Sn",
+        #                    output=unet_model_path)
+        # yolo_model_path = os.path.join(
+        #     os.getcwd(), "models", "yolov8x_crack_seg.pt")
+        # if not os.path.exists(yolo_model_path):
+        #     gdown.download(id="1F-3ZAd1lluOT1quedjv2Xd00sVnSq92o",
+        #                    output=yolo_model_path)
 
+        # Initialize services
         self.api = Services()
 
         # Open temp folder for static file access
