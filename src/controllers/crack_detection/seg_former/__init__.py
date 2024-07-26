@@ -1,15 +1,10 @@
 import os
-from pathlib import Path
-import shutil
 import numpy as np
 from PIL import Image
 import math
-import matplotlib.pyplot as plt
-from copy import deepcopy
 import cv2 as cv
 import gdown
 from src.utils.onnx_infer import onnx_interence_session, onnx_inference
-from src.utils.result_chart import compile_result_chart
 
 
 class FormerCrackSeg():
