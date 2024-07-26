@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from faker import Faker
 import random
 import json
-from logging_system import LogSystem
+from .logging_system import LogSystem
 # Khởi tạo Faker
 faker = Faker()
 log_system = LogSystem()

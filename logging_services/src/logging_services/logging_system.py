@@ -2,6 +2,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 from elasticsearch import Elasticsearch
 import threading
+import os
+
 
 class LogSystem:
    _instance = None

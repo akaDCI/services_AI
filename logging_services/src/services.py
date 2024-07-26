@@ -7,8 +7,8 @@ from datetime import datetime
 from .logging_services.gpt_model import OpenAIClient
 from .logging_services.load_systhesis import read_and_load_data
 
-AZURE_ENDPOINT = "https://aitlab.openai.azure.com/"
-API_KEY = "26c3ea0827914a67a7e4c044311b2b9a"
+AZURE_ENDPOINT = ""
+API_KEY = ""
 
 
 @dataclass

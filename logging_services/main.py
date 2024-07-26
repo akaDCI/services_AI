@@ -9,9 +9,6 @@ class AIServer:
     def __init__(self):
         self.api = Services()
 
-        self.api.app.mount(
-            f"/report", StaticFiles(directory="/Users/mac/Documents/akaDCI/akaDCI_hotdev/services_AI/src/logging_services/visual"), name="report")
-
     def __call__(self):
         return self.api.app
 
