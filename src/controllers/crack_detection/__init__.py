@@ -4,25 +4,30 @@ import shutil
 from src.controllers.crack_detection.unet import UnetCrackSeg
 from src.controllers.crack_detection.yolo import YoloCrackSeg
 from src.controllers.crack_detection.seg_former import FormerCrackSeg
+
+
 class CrackSegController:
-    def __init__(self, provider: str = "unet"):
+    def __init__(self, provider: str = "segformer"):
         self.provider = provider
         self.model = self.__get_provider(provider)
 
-    def __get_provider(self, provider: str = "default"):
-        if provider == "unet":
-            return UnetCrackSeg()
-        elif provider == "yolo":
-            return YoloCrackSeg()
-        else:
+    def __get_provider(self, provider: str = "segformer"):
+        if provider == "segformer":
             return FormerCrackSeg()
+        # elif provider == "yolo":
+        #     return YoloCrackSeg()
+        # elif provider == "unet":
+        #     return UnetCrackSeg()
+        else:
+            raise ValueError(f"Provider {provider} invalid")
 
-    def infer(self, img_folder):
-        img_dir = f"tmp/upload_files/{img_folder}"
+    def set_provider(self, provider: str):
+        self.model = self.__get_provider(provider)
+
+    def infer(self, images, threshold: float = 0.65):
         s = time.time()
-        seg_results, raw_imgs, pred_imgs = self.model.infer(img_folder)
-        shutil.rmtree(img_dir)
+        crack_results = self.model.infer(images, threshold)
         logging.info(
             f"Inferred {self.__class__.__name__} [{round(time.time() - s)}s]")
 
-        return seg_results, raw_imgs, pred_imgs
+        return crack_results

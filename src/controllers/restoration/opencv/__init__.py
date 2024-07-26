@@ -13,10 +13,7 @@ class OpenCVRestorationProvider(BaseRestorationProvider):
     def __init__(self, config=DefaultConfig):
         super().__init__(config)
 
-    def infer(self, images, masks, server):
-        logging.warning(
-            "Server option is not available in OpenCV restoration.")
-
+    def infer(self, images, masks):
         inpainteds = []
         for image, mask in zip(images, masks):
             inpainted = cv.inpaint(

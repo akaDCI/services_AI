@@ -10,7 +10,7 @@ from fastapi.responses import RedirectResponse, ORJSONResponse, StreamingRespons
 from .controllers.restoration import RestorationController, InferenceProvider, InferenceServer
 from .controllers.crack_detection import CrackSegController
 from .controllers.llm import LLMInputs, LLMController
-from src.utils.static import save_images, save_file
+from src.utils.static import save_images, save_file, loads_static
 from src.utils.client import get_client, Client
 from src.utils.response import ResponseData
 
@@ -27,8 +27,7 @@ class Services:
         """Post init"""
         # Intialize services
         self.restoration = RestorationController()
-        self.crack_seg_infer = CrackSegController(
-            provider="default")  # default or unet or yolo
+        self.crackseg = CrackSegController()
         self.llm = LLMController()
 
         # Register routes
@@ -70,62 +69,28 @@ class Services:
 
         return ResponseData(_response)
 
-    async def crackseg_infer(self, upload_images: list[UploadFile] = File(...)):
+    async def crackseg_infer(
+        self,
+        client: Annotated[Client, Depends(get_client)],
+        threshold: Annotated[float, Form(...)] = 0.65,
+        provider: Annotated[str, Form(...)] = "segformer",
+    ):
         """
         Crack segmentation
         """
-        name_folder = uuid.uuid4().hex
-        folder_path = f"tmp/upload_files/{name_folder}"
-        # create folder
-        os.makedirs(folder_path, exist_ok=True)
-        for image in upload_images:
-            img_filename = image.filename.split(".")[-1]
-            if img_filename.lower() not in ["jpg", "jpeg", "png"]:
-                raise HTTPException(
-                    status_code=400, detail=f"Invalid image format {image.filename}")
+        # Retrieve uploaded files
+        _uploads = client.data.get("uploads", None)
+        if not _uploads:
+            raise HTTPException(
+                status_code=400, detail="Uploads required. Do /uploads first.")
 
-            name_image = uuid.uuid4().hex
-            # save image in folder_path
-            image_path = f'{folder_path}/{name_image}.jpg'
-            try:
-                image_data = await image.read()
-                pil_image = Image.open(io.BytesIO(image_data))
-                rgb_pil_image = pil_image.convert('RGB')
-                rgb_pil_image.save(image_path)
-            except Exception as e:
-                raise HTTPException(
-                    status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
-        seg_results, raw_imgs, pred_imgs = self.crack_seg_infer.infer(
-            name_folder)
-        return {"msg": "Success",
-                "seg_results":  seg_results}
-
-    async def restoration_infer(
-        self,
-        images: Annotated[List[UploadFile], File(...)],
-        masks: Annotated[List[UploadFile], File(...)],
-        stream: Annotated[bool, Form()] = False,
-        provider: Annotated[InferenceProvider, Form()] = "crfill",
-        server: Annotated[InferenceServer, Form()] = "torch"
-    ):
-        """
-        Crack restoration
-        """
-        # Read images, masks data
-        _images, _masks = [], []
-        for image, mask in zip(images, masks):
-            _images.append(await image.read())
-            _masks.append(await mask.read())
+        # Load images
+        _images = loads_static(_uploads)
 
         # Inference
         try:
-            inpainteds = self.restoration.infer(
-                _images,
-                _masks,
-                provider,
-                server,
-                "bytes" if stream else "pillow"
-            )
+            self.crackseg.set_provider(provider)
+            _results = self.crackseg.infer(_images, threshold)
         except Exception as e:
             traceback.print_exc()
             raise HTTPException(
@@ -133,24 +98,61 @@ class Services:
                 detail=str(e)
             )
 
-        # If stream is True, return Streaming response
-        if stream:
-            def stream_iteration():
-                for inpainted in inpainteds:
-                    buffer = io.BytesIO(inpainted)
-                    yield buffer
-            return StreamingResponse(stream_iteration(), media_type="image/png")
+        # Save results
+        _path = save_images("crackseg", _results)
 
-        # Else, save file locally and return path
-        _paths = save_images("restore", inpainteds)
-        return ORJSONResponse({
-            "paths": _paths
-        })
+        # Update client data
+        _response = {
+            "crackseg": _path
+        }
+        client.update(_response)
+        client.save()
 
-        # if stream == False:
-        #     return JSONResponse({
-        #         "path": result
-        #     })
+        return ResponseData(_response)
+
+    async def restoration_infer(
+        self,
+        client: Annotated[Client, Depends(get_client)],
+        provider: Annotated[str, Form(...)] = "crfill",
+    ):
+        """
+        Crack restoration
+        """
+        # Retrieve uploaded files
+        _images = client.data.get("uploads", None)
+        _masks = client.data.get("crackseg", None)
+
+        # Check if images and masks are available
+        if not _images or not _masks:
+            raise HTTPException(
+                status_code=400, detail="Images and masks required. Do /uploads and /crack_seg first.")
+
+        # Load images, masks
+        _images = loads_static(_images, type="np")
+        _masks = loads_static(_masks, mode="L", type="np")
+
+        # Inference
+        try:
+            self.restoration.set_provider(provider)
+            _results = self.restoration.infer(_images, _masks)
+        except Exception as e:
+            traceback.print_exc()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(e)
+            )
+
+        # Save results
+        _paths = save_images("restore", _results)
+
+        # Update client data
+        _response = {
+            "restore": _paths
+        }
+        client.update(_response)
+        client.save()
+
+        return ResponseData(_response)
 
     async def infer(
         self,
@@ -184,7 +186,7 @@ class Services:
             except Exception as e:
                 raise HTTPException(
                     status_code=400, detail=f"Failed to process image {image.filename}: {str(e)}")
-        seg_results, raw_imgs, pred_imgs = self.crack_seg_infer.infer(
+        seg_results, raw_imgs, pred_imgs = self.crackseg.infer(
             name_folder)
 
         # Crack inpaint
@@ -214,8 +216,7 @@ class Services:
             else:
                 result = self.llm.generate(
                     prompt=data.question, knowledge=data.knowledge)
-                return ORJSONResponse(content={
-                    "msg": "Success",
+                return ResponseData({
                     "answer": result
                 })
         except Exception as e:
@@ -224,6 +225,6 @@ class Services:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=str(e))
 
-    @property
+    @ property
     def __call__(self):
         return self.app

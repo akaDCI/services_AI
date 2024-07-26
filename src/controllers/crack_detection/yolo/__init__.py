@@ -8,15 +8,25 @@ import matplotlib.pyplot as plt
 from os.path import join
 import numpy as np
 import torch
+import gdown
+
 
 class YoloCrackSeg():
-    def __init__(self,confidence_threshold = 0.25) -> None:
-        self.model = YOLO("models/yolov8x_crack_seg.pt")
+    def __init__(self, confidence_threshold=0.25) -> None:
+        self.model = YOLO(self.__download_model())
         self.confidence_threshold = confidence_threshold
         self.out_pred_dir = None
         self.out_viz_dir = None
         self.crack_predict_results = "data/crack_results/crack_predict_results"
         self.crack_viz_results = "data/crack_results/crack_viz_results"
+
+    def __download_model(self):
+        yolo_model_path = os.path.join(
+            os.getcwd(), "models", "yolov8x_crack_seg.pt")
+        if not os.path.exists(yolo_model_path):
+            gdown.download(id="1F-3ZAd1lluOT1quedjv2Xd00sVnSq92o",
+                           output=yolo_model_path)
+        return yolo_model_path
 
     def infer(self, img_folder, save_results=True):
         img_dir = f"tmp/upload_files/{img_folder}"
@@ -43,9 +53,10 @@ class YoloCrackSeg():
             img = Image.open(str(img_path))
             img = np.asarray(img)
             raw_arr_imgs.append(img)  # Store the raw image
-            
+
             # Make prediction
-            results = self.model.predict(source=img, conf=self.confidence_threshold, stream=True)
+            results = self.model.predict(
+                source=img, conf=self.confidence_threshold, stream=True)
             img_pil = Image.fromarray(img)
 
             # img_pil.show()
@@ -55,7 +66,7 @@ class YoloCrackSeg():
                 # get array results
                 masks = result.masks.data
                 boxes = result.boxes.data
-                
+
                 # extract classes
                 clss = boxes[:, 5]
                 # get indices of results where class is 0
@@ -63,25 +74,30 @@ class YoloCrackSeg():
                 # use these indices to extract the relevant masks
                 crack_masks = masks[crack_indices]
                 # scale for visualizing results
-                crack_mask = (torch.any(crack_masks, dim=0) * 255).to(torch.uint8)
+                crack_mask = (torch.any(crack_masks, dim=0)
+                              * 255).to(torch.uint8)
                 # convert to numpy array
                 crack_mask = crack_mask.cpu().numpy()
                 # convert to PIL image
                 crack_mask_pil = Image.fromarray(crack_mask)
                 # Resize the segmentation image to match the original image size
-                seg_image_pil = crack_mask_pil.resize(img_pil.size, resample=Image.NEAREST)
+                seg_image_pil = crack_mask_pil.resize(
+                    img_pil.size, resample=Image.NEAREST)
                 seg_img_arr = np.asarray(seg_image_pil)
-                
+
                 # append to list of predicted images
                 pred_arr_imgs.append(seg_img_arr)  # Store the predicted image
 
                 if self.out_pred_dir is not None:
-                    seg_image_pil.convert('RGB').save(join(self.out_pred_dir, f'yolo_{img_path.stem}.jpg'))
-                    seg_results.append(join(self.out_pred_dir, f'yolo_{img_path.stem}.jpg'))
+                    seg_image_pil.convert('RGB').save(
+                        join(self.out_pred_dir, f'yolo_{img_path.stem}.jpg'))
+                    seg_results.append(
+                        join(self.out_pred_dir, f'yolo_{img_path.stem}.jpg'))
 
                 if self.out_viz_dir is not None:
                     fig = plt.figure(figsize=(10, 5))
-                    fig.suptitle(f'YOLOv8 Model \n img={img_path.stem} \n threshold = {self.confidence_threshold}')
+                    fig.suptitle(
+                        f'YOLOv8 Model \n img={img_path.stem} \n threshold = {self.confidence_threshold}')
                     ax = fig.add_subplot(131)
                     ax.imshow(img_pil)
                     ax = fig.add_subplot(132)
@@ -89,9 +105,11 @@ class YoloCrackSeg():
                     ax = fig.add_subplot(133)
                     ax.imshow(img_pil)
                     ax.imshow(seg_image_pil, alpha=0.4)
-                    plt.savefig(join(self.out_viz_dir, f'yolo_{img_path.stem}.jpg'), dpi=500)
+                    plt.savefig(
+                        join(self.out_viz_dir, f'yolo_{img_path.stem}.jpg'), dpi=500)
                     plt.close('all')
 
-                    seg_results.append(join(self.out_viz_dir, f'yolo_{img_path.stem}.jpg'))
+                    seg_results.append(
+                        join(self.out_viz_dir, f'yolo_{img_path.stem}.jpg'))
 
         return seg_results, raw_arr_imgs, pred_arr_imgs

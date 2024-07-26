@@ -1,3 +1,19 @@
 {
-  "test": {}
+  "test": {
+    "uploads": [
+      "data\\uploads\\53afab4a7963451baa5162945343e956.png",
+      "data\\uploads\\3646cd1d6c9e4177a1dc9505a7f774c5.png",
+      "data\\uploads\\f0361a04015a4a149a720c7ddb6f48df.png"
+    ],
+    "crackseg": [
+      "data\\crackseg\\9323740c3a0c4e6ab4131867498c5ef6.png",
+      "data\\crackseg\\2d26a7eb6c4b4b128dc890eb32858330.png",
+      "data\\crackseg\\a11d960eff3d4212bf552394c0f572c8.png"
+    ],
+    "restore": [
+      "data\\restore\\6ad5dea9863845728d71d0816d7cf152.png",
+      "data\\restore\\93bdc0a90a8d462494006ca57f64c14f.png",
+      "data\\restore\\fd9863f7cf6c4e5c80fc7354cc81e7ab.png"
+    ]
+  }
 }
