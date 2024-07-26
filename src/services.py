@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request, Response, UploadFile, File, Form, HTTPExce
 from fastapi.responses import RedirectResponse, ORJSONResponse, StreamingResponse
 from .controllers.restoration import RestorationController, InferenceProvider, InferenceServer
 from .controllers.crack_detection import CrackSegController
+from .controllers.llm import LLMInputs, LLMController
 from src.utils.static import save_images
 
 
@@ -26,12 +27,14 @@ class Services:
         self.restoration = RestorationController()
         self.crack_seg_infer = CrackSegController(
             provider="default")  # default or unet or yolo
+        self.llm = LLMController()
 
         # Register routes
         self.app.get("/")(self.main)
         self.app.post("/infer")(self.infer)
         self.app.post("/api/restore")(self.restoration_infer)
         self.app.post("/api/crack_seg")(self.crackseg_infer)
+        self.app.post("/api/llm")(self.chat_llm)
 
     async def main(self, request: Request, response: Response):
         """
@@ -165,6 +168,18 @@ class Services:
             "msg": "Success",
             "seg_results":  seg_results,
             "inpaint_results": inpaint_results
+        }
+
+    async def chat_llm(self, data: LLMInputs):
+        """
+        Chat with LLM
+        """
+        result = self.llm.generate(data.question, data.knowledge, data.item_id)
+
+        return {
+            "msg": "Success",
+            "answer": result,
+            "lips": None
         }
 
     @property
