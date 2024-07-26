@@ -1,51 +1,68 @@
-import os
-import logging
+import http
+import json
+
 import uvicorn
-from fastapi.staticfiles import StaticFiles
-from src.services import Services
-from src.utils.static import StaticDirectory, create_directory
-import gdown
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError
+from contextlib import asynccontextmanager
 
+from controllers import status, cluster_vis_pred_controller
+from models.base import GenericResponseModel
+# from logs import logger
+from utils.helper import build_api_response
+from scripts.context_manager import context_log_meta
+from utils.exceptions import AppException
 
-class AIServer:
-    def __init__(self):
-        # Download model when initialize
-        seg_former_model_path = os.path.join(
-            os.getcwd(), "models", "seg_former.onnx")
-        if not os.path.exists(seg_former_model_path):
-            gdown.download(id="1K6pE3fexH25ek4OrrUbvIvqpg7YM1AXv",
-                           output=seg_former_model_path)
-        unet_model_path = os.path.join(
-            os.getcwd(), "models", "model_unet_vgg_16_best.pt")
-        if not os.path.exists(unet_model_path):
-            gdown.download(id="1WfseljuUpMak1lLvyzRFIeDHSbgxv8Sn",
-                           output=unet_model_path)
-        yolo_model_path = os.path.join(
-            os.getcwd(), "models", "yolov8x_crack_seg.pt")
-        if not os.path.exists(yolo_model_path):
-            gdown.download(id="1F-3ZAd1lluOT1quedjv2Xd00sVnSq92o",
-                           output=yolo_model_path)
+# register startup and shutdown using lifespan Events
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup event
+    # logger.info("Startup Event Triggered")
+    print("Startup Event Triggered")
+    yield
+    # shutdown event
+    # logger.info("Shutdown Event Triggered")
+    print("Shutdown Event Triggered")
 
-        self.api = Services()
+app = FastAPI(lifespan=lifespan)
+app.title = "akaDCI API Services"
+app.version = "0.0.1"
 
-        # Open temp folder for static file access
-        self.api.app.mount(
-            f"/{StaticDirectory}", StaticFiles(directory=create_directory(StaticDirectory)), name=StaticDirectory)
+# register routers here and add dependency on authenticate_token if token based authentication is required
+app.include_router(status.status_router)
+app.include_router(cluster_vis_pred_controller.cluster_vis_pred)
 
-    def __call__(self):
-        return self.api.app
+# register exception handlers here
+@app.exception_handler(ValidationError)
+async def pydantic_validation_exception_handler(request: Request, exc):
+    # logger.error(extra=context_log_meta.get(), msg=f"data validation failed {exc.errors()}")
+    return build_api_response(GenericResponseModel(status_code=http.HTTPStatus.BAD_REQUEST,
+                                                   error=f"Data validation failed: {json.loads(str(exc))}"))
 
+@app.exception_handler(AppException)
+async def app_exception_handler(request: Request, exc):
+    # logger.error(extra=context_log_meta.get(), msg=f"application exception occurred error: {json.loads(str(exc))}")
+    return build_api_response(GenericResponseModel(status_code=exc.status_code, error=f"Application exception occurred error: {json.loads(str(exc))}"))
+
+# not_found_exception_handler
+@app.exception_handler(404)
+async def not_found_exception_handler(request: Request, exc: HTTPException):
+    # logger.error(extra=context_log_meta.get(), msg=f"Resource not found: {exc}")
+    return build_api_response(GenericResponseModel(status_code=exc.status_code, error="Resource not found"))
+
+# request_validation_exception_handler
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(request: Request, exc):
+    # logger.error(extra=context_log_meta.get(), msg=f"Request Validation Failed: {exc}")
+    return build_api_response(GenericResponseModel(status_code=http.HTTPStatus.BAD_REQUEST,
+                                                   error=f"Request Validation Failed: {json.loads(str(exc))}"))
+
+# Create a GET method that responds with HTML code
+@app.get('/', tags = ['home'])
+def message():
+    return HTMLResponse('<h1>Welcome to akaDCI API Services</h1>')
 
 if __name__ == "__main__":
-    server = AIServer()
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(filename)s (%(lineno)d) | \033[1m%(asctime)s\033[0m | \033[96m%(levelname)s\033[0m | %(message)s",
-        datefmt='%d-%b-%y %H:%M:%S'
-    )
-    uvicorn.run(
-        server,
-        host=os.environ.get("HOST", "127.0.0.1"),
-        port=int(os.environ.get("PORT", 7860)),
-        factory=True
-    )
+    uvicorn.run("main:app", host="0.0.0.0", port=7860, reload=True)

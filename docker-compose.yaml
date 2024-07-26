@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  be_ranksume: 
+    build: .
+    container_name: "challenge_3"
+    ports:
+      - 80:7860
+    volumes:
+      - .:/home/user/app
+    env_file:
+      - .env
