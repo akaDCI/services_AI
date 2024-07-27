@@ -1,41 +1,86 @@
 import pandas as pd
+import os
 import json
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.cluster import KMeans
+import numpy as np
 import plotly.express as px
+from sklearn.cluster import KMeans
+from sklearn.manifold import TSNE
+from ast import literal_eval
+import pathlib
+
+from configs.llm_model import embeddings, model, client
+from scripts.promting import PROMPT_REPORT
 
 class ChallengeClusterService:
     def __init__(self) -> None:
         pass
 
-    def visuallize(self, data, num_clusters=4):
-        # Convert to DataFrame
-        df = pd.DataFrame(data)
+    def call_llm(self, prompt, json_file) -> str:
+        completion = client.chat.completions.create(
+            model=os.getenv("DEPLOYMENT_NAME"),
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "hello prompt"}
+                      ],
+            max_tokens=1000,
+        )
+        message_openai = completion.choices[0].message.content.lstrip("\n")
+        message_openai = message_openai.replace("\n", "")
+        return message_openai
+    
+    def visuallize(self, data, num_clusters=4, synthetic_data=True):
+        if synthetic_data == False:
+            # Convert to DataFrame
+            df = pd.DataFrame(data)
+            # create df[text] = df["gender"] + df["age"] + df["career"] + df["interest"]
+            df["fulltext"] = df["gender"] + " " + df["age"] + " " + df["career"] + " " + df["interest"]
+            df['embeddings'] = df["fulltext"].apply(lambda x : embeddings.embed_query(x))
+            df.to_csv("data/embeddings.csv", index=False)
+        else:
+            df = pd.read_csv("data/embeddings.csv")
+        
+        df["embedding"] = df.embeddings.apply(literal_eval).apply(np.array)
+        df.drop(columns=["embeddings"], inplace=True)
+        matrix = np.vstack(df.embedding.values)
 
-        # Encode categorical variables
-        le_gender = LabelEncoder()
-        df['gender_encoded'] = le_gender.fit_transform(df['gender'])
+        kmeans = KMeans(n_clusters=num_clusters, init="k-means++", random_state=42)
+        kmeans.fit(matrix)
+        labels = kmeans.labels_
+        df["Cluster"] = labels
 
-        le_career = LabelEncoder()
-        df['career_encoded'] = le_career.fit_transform(df['career'])
+        group_fd = df.groupby("Cluster")
 
-        le_interest = LabelEncoder()
-        df['interest_encoded'] = le_interest.fit_transform(df['interest'])
+        tsne = TSNE(n_components=3, perplexity=15, random_state=42, init="random", learning_rate=200)
+        vis_dims2 = tsne.fit_transform(matrix)
 
-        # Standardize age
-        scaler = StandardScaler()
-        df['age_scaled'] = scaler.fit_transform(df[['age']])
+        df['x'] = vis_dims2[:, 0]
+        df['y'] = vis_dims2[:, 1]
 
-        # Prepare features for clustering
-        features = df[['gender_encoded', 'age_scaled', 'career_encoded', 'interest_encoded']]
+        # Preparing JSON output
+        json_output = {"datasets": []}
 
-        # Perform K-Means clustering
-        kmeans = KMeans(n_clusters=num_clusters, random_state=42)
-        df['cluster'] = kmeans.fit_predict(features)
+        for cluster, group in group_fd:
+            cluster_data = {
+                "label": f"Cluster {cluster + 1}",
+                "data": group[['x', 'y']].to_dict(orient='records')
+            }
+            json_output["datasets"].append(cluster_data)
 
-        # 3D Visualization
-        fig = px.scatter_3d(df, x='age', y='interest', z='career', color='cluster', 
-                            hover_data=['gender', 'age', 'career', 'interest'], 
-                            title="3D Clustering Visualization")
+        # fig = px.scatter(df, x='x', y='y', color='Cluster', opacity=0.6, title="Clusters identified visualized in language 2D using t-SNE")
+        
+        # fig.show()
 
-        fig.show()
+        return json_output
+    
+    def export_report(self, data, synthetic_data = True):
+        str_data = json.dumps(data, indent=4)
+        prompt = PROMPT_REPORT.replace("{data_info}", str_data)
+        print(os.getenv("AZURE_OPENAI_ENDPOINT"),os.getenv("AZURE_OPENAI_API_KEY"),os.getenv("MODEL_VERSION"), os.getenv("DEPLOYMENT_NAME"))
+        json_file = {
+            'mime_type': 'application/json',
+            'data': pathlib.Path('data/cluster_data.json').read_bytes()
+        }
+        # bot_answer = self.call_llm(prompt,json_file)
+        # return bot_answer
+        response = model.generate_content([prompt, json_file])
+        return response.text
