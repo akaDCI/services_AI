@@ -3,6 +3,7 @@ import json
 
 import uvicorn
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
@@ -29,6 +30,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.title = "akaDCI API Services"
 app.version = "0.0.1"
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # register routers here and add dependency on authenticate_token if token based authentication is required
 app.include_router(status.status_router)
