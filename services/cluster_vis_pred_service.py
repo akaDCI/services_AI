@@ -15,12 +15,12 @@ class ChallengeClusterService:
     def __init__(self) -> None:
         pass
 
-    def call_llm(self, prompt, json_file) -> str:
+    def call_llm(self, prompt) -> str:
         completion = client.chat.completions.create(
             model=os.getenv("DEPLOYMENT_NAME"),
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": "hello prompt"}
+                {"role": "user", "content": prompt}
                       ],
             max_tokens=1000,
         )
@@ -50,7 +50,7 @@ class ChallengeClusterService:
 
         group_fd = df.groupby("Cluster")
 
-        tsne = TSNE(n_components=3, perplexity=15, random_state=42, init="random", learning_rate=200)
+        tsne = TSNE(n_components=2, perplexity=15, random_state=42, init="random", learning_rate=200)
         vis_dims2 = tsne.fit_transform(matrix)
 
         df['x'] = vis_dims2[:, 0]
@@ -66,21 +66,11 @@ class ChallengeClusterService:
             }
             json_output["datasets"].append(cluster_data)
 
-        # fig = px.scatter(df, x='x', y='y', color='Cluster', opacity=0.6, title="Clusters identified visualized in language 2D using t-SNE")
-        
-        # fig.show()
-
         return json_output
     
     def export_report(self, data, synthetic_data = True):
         str_data = json.dumps(data, indent=4)
         prompt = PROMPT_REPORT.replace("{data_info}", str_data)
-        print(os.getenv("AZURE_OPENAI_ENDPOINT"),os.getenv("AZURE_OPENAI_API_KEY"),os.getenv("MODEL_VERSION"), os.getenv("DEPLOYMENT_NAME"))
-        json_file = {
-            'mime_type': 'application/json',
-            'data': pathlib.Path('data/cluster_data.json').read_bytes()
-        }
-        # bot_answer = self.call_llm(prompt,json_file)
-        # return bot_answer
-        response = model.generate_content([prompt, json_file])
-        return response.text
+        print("getting report")
+        bot_answer = self.call_llm(prompt)
+        return bot_answer
