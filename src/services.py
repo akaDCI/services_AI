@@ -1,8 +1,10 @@
 import traceback
+import os
+import dotenv
 from dataclasses import dataclass, field
-from PIL import Image
 from typing import Annotated, List
 from fastapi import FastAPI, Request, Response, UploadFile, File, Form, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, StreamingResponse
 from .controllers.restoration import RestorationController
 from .controllers.crack_detection import CrackSegController
@@ -11,6 +13,8 @@ from src.utils.static import save_images, save_file, loads_static
 from src.utils.client import get_client, Client
 from src.utils.response import ResponseData
 from src.utils.image_utils import visualize_image_with_mask
+
+dotenv.load_dotenv(dotenv.find_dotenv())
 
 
 @dataclass
@@ -28,18 +32,37 @@ class Services:
         self.crackseg = CrackSegController()
         self.llm = LLMController()
 
+        # Middleware
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
         # Register routes
         self.app.get("/")(self.main)
         self.app.post("/api/uploads")(self.uploads)
         self.app.post("/api/crack_seg")(self.crackseg_infer)
         self.app.post("/api/restore")(self.restoration_infer)
         self.app.post("/api/llm")(self.chat_llm)
+        self.app.get("/api/azure_key")(self.get_azure_api_key)
 
     async def main(self):
         """
         Redirect to the Swagger documents
         """
         return RedirectResponse("/docs")
+
+    async def get_azure_api_key(self):
+        """
+        Get Azure API Key
+        """
+        speech_key = os.environ.get("AZURE_KEY")
+        speech_region = os.environ.get("AZURE_REGION")
+
+        return ResponseData({"token": speech_key, "region": speech_region})
 
     async def uploads(
         self,
@@ -161,6 +184,13 @@ class Services:
         Chat with LLM
         """
         try:
+            if data.provider == "all":
+                answers = self.llm.generate_choices(
+                    data.question, data.knowledge)
+                return ResponseData({
+                    "answer": answers
+                })
+
             # Set provider
             self.llm.set_provider(data.provider)
 

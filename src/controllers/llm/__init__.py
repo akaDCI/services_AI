@@ -3,6 +3,7 @@ import enum
 import time
 import logging
 from langchain_core.messages import AIMessage, HumanMessage, AIMessageChunk
+from langchain_core.runnables import Runnable
 from ._prompt import prompt_template
 from .gemini import gemini
 from .gpt import gpt
@@ -17,6 +18,7 @@ PROVIDERS = {
 class LLMProvider(enum.Enum):
     gemini = "gemini"
     gpt = "gpt"
+    all = "all"
 
 
 class LLMInputs(BaseModel):
@@ -34,7 +36,7 @@ class LLMController:
             AIMessage(prompt_template)
         ]
 
-    def __get_provider(self, provider: LLMProvider):
+    def __get_provider(self, provider: LLMProvider) -> Runnable:
         global PROVIDERS
         if provider.value in PROVIDERS:
             return PROVIDERS[provider.value]
@@ -64,6 +66,9 @@ class LLMController:
         # Add the question to the history
         self.__add_question(prompt, knowledge)
 
+        print("Prompt:", prompt)
+        print("Knowledge:", knowledge)
+
         # Generate the answer
         _s = time.time()
         answer = self.model.invoke(self.history)
@@ -88,3 +93,24 @@ class LLMController:
         for chunk in streamer:
             self.__add_answer_chunk(chunk)
             yield chunk.content
+
+    def generate_choices(self, prompt: str, knowledge: str):
+        # Add the question to the history
+        self.__add_question(prompt, knowledge)
+
+        # Iterate over provided
+        answers = []
+        for name, provider in PROVIDERS.items():
+            self.set_provider(provider)
+            # Generate the answer
+            _s = time.time()
+            answer = self.model.invoke(self.history)
+            logging.info(
+                f"Generated {name} answer successfull [{round(time.time() - _s, 2)}s]")
+
+            # Add the answer to the history
+            answers.append(answer)
+
+        for answer in answers:
+            self.__add_answer(answer)
+        return [a.content for a in answers]
